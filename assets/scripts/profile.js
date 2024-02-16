@@ -1,5 +1,6 @@
 import { fetchData } from "./graphqlFetcher.js";
 import { displayBasicUserData, displayData } from "./displayHelper.js";
+import { shuffleArray } from "./utils.js";
 
 document.addEventListener("DOMContentLoaded", async function () {
   const jwt = localStorage.getItem("jwt");
@@ -100,10 +101,14 @@ document.addEventListener("DOMContentLoaded", async function () {
       }`
     );
     const projects = projectsResponse.data.transaction;
+
     displayData("projects", projects.length);
 
     const transaction = projectsResponse.data.transaction;
-    transaction.sort((a, b) => a.amount - b.amount);
+    const topTenProjects = transaction
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 10);
+    const shuffledTopTenProjects = shuffleArray(topTenProjects);
 
     // Create svg container
     let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -112,27 +117,27 @@ document.addEventListener("DOMContentLoaded", async function () {
     svg.setAttribute("height", "800");
 
     // Create bars
-    for (let i = 0; i < transaction.length; i++) {
+    for (let i = 0; i < shuffledTopTenProjects.length; i++) {
       let bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
       bar.setAttribute("x", i * 30);
-      bar.setAttribute("y", 700 - transaction[i].amount / 300);
+      bar.setAttribute("y", 700 - shuffledTopTenProjects[i].amount / 300);
       bar.setAttribute("width", "20");
-      bar.setAttribute("height", transaction[i].amount / 300);
-      bar.setAttribute("fill", "steelblue");
+      bar.setAttribute("height", shuffledTopTenProjects[i].amount / 300);
+      bar.setAttribute("fill", "green");
 
       // Add interactivity
       bar.addEventListener("mouseover", () => {
-        // Change color to green
-        bar.setAttribute("fill", "green");
+        bar.setAttribute("fill", "white");
 
-        // Show project name below the bar
+        // Show project name above the bar
         let textBelow = document.createElementNS(
           "http://www.w3.org/2000/svg",
           "text"
         );
         textBelow.setAttribute("x", i * 30);
         textBelow.setAttribute("y", 720);
-        textBelow.textContent = transaction[i].path.split("/").pop();
+        textBelow.setAttribute("fill", "white");
+        textBelow.textContent = shuffledTopTenProjects[i].path.split("/").pop();
         svg.appendChild(textBelow);
 
         // Show amount of xp above the bar
@@ -142,15 +147,15 @@ document.addEventListener("DOMContentLoaded", async function () {
         );
         textAbove.setAttribute("x", i * 30);
         textAbove.setAttribute("y", 740);
+        textAbove.setAttribute("fill", "green");
         textAbove.textContent =
-          (transaction[i].amount / 1000).toFixed(2) + "xp";
+          (shuffledTopTenProjects[i].amount / 1000).toFixed(2) + "xp";
         svg.appendChild(textAbove);
       });
 
       // Reset on mouseout
       bar.addEventListener("mouseout", () => {
-        // Change color back to steelblue
-        bar.setAttribute("fill", "steelblue");
+        bar.setAttribute("fill", "green");
 
         // Remove texts
         svg.querySelectorAll("text").forEach((text) => {
@@ -160,13 +165,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       svg.appendChild(bar);
     }
 
-    // Append SVG to the body of the document
     document.getElementById("graph").appendChild(svg);
 
     // *************************** Create Circular (Pie Chart) Graph ****************************** //
     const totalAudit = auditDone + auditReceived;
-    const radius = 200;
-    const center = { x: 450, y: 300 };
+    const radius = 150;
+    const center = { x: 250, y: 300 };
 
     // Calculate angles
     const angleAuditDone = (auditDone / totalAudit) * 360;
@@ -247,7 +251,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     labelAuditReceived.setAttribute("fill", "white");
     pieChartSVG.appendChild(labelAuditReceived);
 
-    // Append SVG to the body of the document
     document.getElementById("ratioGraph").appendChild(pieChartSVG);
 
     // Add event listener for the logout button
